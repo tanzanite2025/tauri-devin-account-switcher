@@ -90,3 +90,11 @@ export async function saveProfileApi(
     hideLoading();
   }
 }
+
+export async function triggerQuotaRefreshApi() {
+  try {
+    await invoke("refresh_all_quotas");
+  } catch (err) {
+    console.error("[CRITICAL] Failed to refresh quotas headlessly:", err);
+  }
+}

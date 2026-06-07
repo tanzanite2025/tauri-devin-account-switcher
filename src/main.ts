@@ -2,7 +2,7 @@ import { listen } from "@tauri-apps/api/event";
 import { initLanguage, toggleLanguage, t } from "./i18n";
 import { getEl } from "./dom";
 import { state } from "./state";
-import { fetchAccountsApi, saveProfileApi, importCurrentCredentialsApi } from "./api";
+import { fetchAccountsApi, saveProfileApi, importCurrentCredentialsApi, triggerQuotaRefreshApi } from "./api";
 import { openDialog, closeDialog, togglePasswordVisibility } from "./ui";
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -95,5 +95,11 @@ window.addEventListener("DOMContentLoaded", () => {
   listen("account-plan-updated", debouncedFetch);
   listen("account-quota-updated", debouncedFetch);
 
-  fetchAccountsApi();
+  fetchAccountsApi().then(() => {
+    triggerQuotaRefreshApi();
+  });
+
+  window.addEventListener("focus", () => {
+    triggerQuotaRefreshApi();
+  });
 });
