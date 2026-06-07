@@ -31,6 +31,8 @@ pub struct AppConfig {
     pub accounts: Vec<Account>,
 }
 
+pub struct AppState(pub std::sync::Mutex<AppConfig>);
+
 fn get_config_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     let path = app.path().app_config_dir()
         .map_err(|e| format!("[CRITICAL] 无法获取系统 App Config 目录: {}", e))?;
@@ -43,28 +45,59 @@ fn get_config_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
 
 pub fn load_config(app: &tauri::AppHandle) -> Result<AppConfig, String> {
     let config_path = get_config_path(app)?;
+    let backup_path = config_path.with_extension("json.bak");
+
     if !config_path.exists() {
-        let default_config = AppConfig::default();
-        save_config(app, &default_config)?;
-        return Ok(default_config);
+        if backup_path.exists() {
+            let _ = fs::copy(&backup_path, &config_path);
+        } else {
+            let default_config = AppConfig::default();
+            save_config(app, &default_config)?;
+            return Ok(default_config);
+        }
     }
 
     let content = fs::read_to_string(&config_path)
         .map_err(|e| format!("[CRITICAL] 读取账户配置文件失败 {:?}: {}", config_path, e))?;
     
-    let config: AppConfig = serde_json::from_str(&content)
-        .map_err(|e| format!("[CRITICAL] 账户配置文件解析失败，数据可能损坏: {}", e))?;
-        
-    Ok(config)
+    match serde_json::from_str(&content) {
+        Ok(config) => Ok(config),
+        Err(e) => {
+            eprintln!("[CRITICAL] 账户配置文件解析失败: {}。尝试从备份恢复...", e);
+            if backup_path.exists() {
+                let backup_content = fs::read_to_string(&backup_path)
+                    .map_err(|err| format!("[CRITICAL] 读取备份文件失败: {}", err))?;
+                match serde_json::from_str(&backup_content) {
+                    Ok(config) => {
+                        let _ = fs::copy(&backup_path, &config_path);
+                        Ok(config)
+                    },
+                    Err(be) => Err(format!("[CRITICAL] 配置文件与备份文件均损坏。配置错误: {}, 备份错误: {}", e, be))
+                }
+            } else {
+                Err(format!("[CRITICAL] 账户配置文件解析失败且无备份，数据可能损坏: {}", e))
+            }
+        }
+    }
 }
 
 pub fn save_config(app: &tauri::AppHandle, config: &AppConfig) -> Result<(), String> {
     let config_path = get_config_path(app)?;
+    let backup_path = config_path.with_extension("json.bak");
+    let temp_path = config_path.with_extension("json.tmp");
+
     let content = serde_json::to_string_pretty(config)
         .map_err(|e| format!("[CRITICAL] 序列化账户配置失败: {}", e))?;
     
-    fs::write(&config_path, content)
-        .map_err(|e| format!("[CRITICAL] 写入账户配置文件失败 {:?}: {}", config_path, e))?;
+    fs::write(&temp_path, content)
+        .map_err(|e| format!("[CRITICAL] 写入账户临时配置文件失败 {:?}: {}", temp_path, e))?;
+        
+    if config_path.exists() {
+        let _ = fs::copy(&config_path, &backup_path);
+    }
+    
+    fs::rename(&temp_path, &config_path)
+        .map_err(|e| format!("[CRITICAL] 原子替换账户配置文件失败 {:?} -> {:?}: {}", temp_path, config_path, e))?;
         
     Ok(())
 }
@@ -79,7 +112,7 @@ fn parse_default_credentials() -> Result<(Option<String>, Option<String>), Strin
         let content = fs::read_to_string(&creds_path)
             .map_err(|e| format!("[CRITICAL] 读取 credentials.toml 失败: {}", e))?;
         for line in content.lines() {
-            let clean = line.trim();
+            let clean = line.split('#').next().unwrap_or("").trim();
             if clean.starts_with("windsurf_api_key") {
                 if let Some(eq_idx) = clean.find('=') {
                     let val = clean[eq_idx + 1..].trim().trim_matches('"').trim_matches('\'').trim().to_string();
@@ -126,17 +159,17 @@ pub fn import_current_credentials() -> Result<ImportResult, String> {
 }
 
 #[tauri::command]
-pub fn get_accounts(app: tauri::AppHandle) -> Result<Vec<Account>, String> {
-    let config = load_config(&app)?;
-    Ok(config.accounts)
+pub fn get_accounts(state: tauri::State<'_, AppState>) -> Result<Vec<Account>, String> {
+    let config = state.0.lock().map_err(|e| format!("[CRITICAL] Mutex lock failed: {}", e))?;
+    Ok(config.accounts.clone())
 }
 
 #[tauri::command]
-pub fn add_account(app: tauri::AppHandle, name: String, email: Option<String>, password: Option<String>, token: Option<String>, org_id: Option<String>, plan_tier: String) -> Result<Account, String> {
+pub fn add_account(app: tauri::AppHandle, state: tauri::State<'_, AppState>, name: String, email: Option<String>, password: Option<String>, token: Option<String>, org_id: Option<String>, plan_tier: String) -> Result<Account, String> {
     if name.trim().is_empty() {
         return Err("[CRITICAL] 账号名称不能为空".to_string());
     }
-    let mut config = load_config(&app)?;
+    let mut config = state.0.lock().map_err(|e| format!("[CRITICAL] Mutex lock failed: {}", e))?;
     
     let id = Uuid::new_v4().to_string();
     let created_at = SystemTime::now()
@@ -162,14 +195,14 @@ pub fn add_account(app: tauri::AppHandle, name: String, email: Option<String>, p
     };
     
     config.accounts.push(new_account.clone());
-    save_config(&app, &config)?;
+    save_config(&app, &*config)?;
     
     Ok(new_account)
 }
 
 #[tauri::command]
-pub fn delete_account(app: tauri::AppHandle, id: String) -> Result<(), String> {
-    let mut config = load_config(&app)?;
+pub fn delete_account(app: tauri::AppHandle, state: tauri::State<'_, AppState>, id: String) -> Result<(), String> {
+    let mut config = state.0.lock().map_err(|e| format!("[CRITICAL] Mutex lock failed: {}", e))?;
     
     let original_len = config.accounts.len();
     config.accounts.retain(|acc| acc.id != id);
@@ -178,7 +211,7 @@ pub fn delete_account(app: tauri::AppHandle, id: String) -> Result<(), String> {
         return Err(format!("[CRITICAL] 未找到 ID 为 {} 的账号", id));
     }
     
-    save_config(&app, &config)?;
+    save_config(&app, &*config)?;
     
     let path = app.path().app_config_dir()
         .map_err(|e| format!("[CRITICAL] 无法获取系统 App Config 目录: {}", e))?;
@@ -200,11 +233,11 @@ pub fn delete_account(app: tauri::AppHandle, id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn rename_account(app: tauri::AppHandle, id: String, new_name: String, email: Option<String>, password: Option<String>, token: Option<String>, org_id: Option<String>, plan_tier: String) -> Result<(), String> {
+pub fn rename_account(app: tauri::AppHandle, state: tauri::State<'_, AppState>, id: String, new_name: String, email: Option<String>, password: Option<String>, token: Option<String>, org_id: Option<String>, plan_tier: String) -> Result<(), String> {
     if new_name.trim().is_empty() {
         return Err("[CRITICAL] 账号名称不能为空".to_string());
     }
-    let mut config = load_config(&app)?;
+    let mut config = state.0.lock().map_err(|e| format!("[CRITICAL] Mutex lock failed: {}", e))?;
     
     let mut found = false;
     let clean_email = email.filter(|e| !e.trim().is_empty()).map(|e| e.trim().to_string());
@@ -230,13 +263,13 @@ pub fn rename_account(app: tauri::AppHandle, id: String, new_name: String, email
         return Err(format!("[CRITICAL] 未找到 ID 为 {} 的账号", id));
     }
     
-    save_config(&app, &config)?;
+    save_config(&app, &*config)?;
     Ok(())
 }
 
 #[tauri::command]
-pub fn update_account_plan(app: tauri::AppHandle, id: String, plan: String) -> Result<(), String> {
-    let mut config = load_config(&app)?;
+pub fn update_account_plan(app: tauri::AppHandle, state: tauri::State<'_, AppState>, id: String, plan: String) -> Result<(), String> {
+    let mut config = state.0.lock().map_err(|e| format!("[CRITICAL] Mutex lock failed: {}", e))?;
     let mut found = false;
     let upper_plan = plan.trim().to_uppercase();
 
@@ -251,7 +284,7 @@ pub fn update_account_plan(app: tauri::AppHandle, id: String, plan: String) -> R
     }
 
     if found {
-        save_config(&app, &config)?;
+        save_config(&app, &*config)?;
         let _ = app.emit("account-plan-updated", ());
     }
 
@@ -259,7 +292,7 @@ pub fn update_account_plan(app: tauri::AppHandle, id: String, plan: String) -> R
 }
 
 #[tauri::command]
-pub fn open_account_window(app: tauri::AppHandle, id: String, name: String) -> Result<(), String> {
+pub fn open_account_window(app: tauri::AppHandle, state: tauri::State<'_, AppState>, id: String, name: String) -> Result<(), String> {
     let label = format!("devin-profile-{}", id);
     
     if let Some(existing_window) = app.get_webview_window(&label) {
@@ -268,7 +301,7 @@ pub fn open_account_window(app: tauri::AppHandle, id: String, name: String) -> R
         return Ok(());
     }
     
-    let config = load_config(&app)?;
+    let config = state.0.lock().map_err(|e| format!("[CRITICAL] Mutex lock failed: {}", e))?;
     let mut email_val = String::new();
     let mut password_val = String::new();
     
@@ -323,8 +356,8 @@ pub fn open_account_window(app: tauri::AppHandle, id: String, name: String) -> R
                     }}
                     if (authHeader && authHeader.includes("devin-session-token$")) {{
                         const tokenVal = authHeader.replace("Bearer ", "").trim();
-                        if (window.__TAURI_INTERNALS__ && window.__TAURI_INTERNALS__.invoke) {{
-                            window.__TAURI_INTERNALS__.invoke("bind_captured_token", {{ id: accountId, token: tokenVal }})
+                        if (window.__TAURI__ && window.__TAURI__.core.invoke) {{
+                            window.__TAURI__.core.invoke("bind_captured_token", {{ id: accountId, token: tokenVal }})
                                 .catch(err => console.error(err));
                         }}
                     }}
@@ -366,8 +399,8 @@ pub fn open_account_window(app: tauri::AppHandle, id: String, name: String) -> R
                         
                         search(data);
                         if (foundToken) {{
-                            if (window.__TAURI_INTERNALS__ && window.__TAURI_INTERNALS__.invoke) {{
-                                window.__TAURI_INTERNALS__.invoke("bind_captured_token", {{ id: accountId, token: foundToken }})
+                            if (window.__TAURI__ && window.__TAURI__.core.invoke) {{
+                                window.__TAURI__.core.invoke("bind_captured_token", {{ id: accountId, token: foundToken }})
                                     .catch(err => console.error(err));
                             }}
                         }}
@@ -445,8 +478,8 @@ pub fn open_account_window(app: tauri::AppHandle, id: String, name: String) -> R
                         
                         if (plan) {{
                             const upperPlan = plan.toUpperCase();
-                            if (window.__TAURI_INTERNALS__ && window.__TAURI_INTERNALS__.invoke) {{
-                                await window.__TAURI_INTERNALS__.invoke("update_account_plan", {{ id: accountId, plan: upperPlan }});
+                            if (window.__TAURI__ && window.__TAURI__.core.invoke) {{
+                                await window.__TAURI__.core.invoke("update_account_plan", {{ id: accountId, plan: upperPlan }});
                                 return true;
                             }}
                         }}
@@ -479,8 +512,8 @@ pub fn open_account_window(app: tauri::AppHandle, id: String, name: String) -> R
 }
 
 #[tauri::command]
-pub fn bind_captured_token(app: tauri::AppHandle, id: String, token: String) -> Result<(), String> {
-    let mut config = load_config(&app)?;
+pub fn bind_captured_token(app: tauri::AppHandle, state: tauri::State<'_, AppState>, id: String, token: String) -> Result<(), String> {
+    let mut config = state.0.lock().map_err(|e| format!("[CRITICAL] Mutex lock failed: {}", e))?;
     let mut found = false;
     let clean_token = token.trim().to_string();
 
@@ -495,7 +528,7 @@ pub fn bind_captured_token(app: tauri::AppHandle, id: String, token: String) -> 
     }
 
     if found {
-        save_config(&app, &config)?;
+        save_config(&app, &*config)?;
         let _ = app.emit("account-plan-updated", ());
     }
 
@@ -509,7 +542,7 @@ pub fn bind_captured_token(app: tauri::AppHandle, id: String, token: String) -> 
 }
 
 #[tauri::command]
-pub fn start_silent_login(app: tauri::AppHandle, id: String, name: String) -> Result<(), String> {
+pub fn start_silent_login(app: tauri::AppHandle, state: tauri::State<'_, AppState>, id: String, name: String) -> Result<(), String> {
     let label = format!("silent-login-{}", id);
     
     if let Some(existing_window) = app.get_webview_window(&label) {
@@ -518,7 +551,7 @@ pub fn start_silent_login(app: tauri::AppHandle, id: String, name: String) -> Re
         return Ok(());
     }
     
-    let config = load_config(&app)?;
+    let config = state.0.lock().map_err(|e| format!("[CRITICAL] Mutex lock failed: {}", e))?;
     let mut email_val = String::new();
     let mut password_val = String::new();
     
@@ -578,8 +611,8 @@ pub fn start_silent_login(app: tauri::AppHandle, id: String, name: String) -> Re
                     }}
                     if (authHeader && authHeader.includes("devin-session-token$")) {{
                         const tokenVal = authHeader.replace("Bearer ", "").trim();
-                        if (window.__TAURI_INTERNALS__ && window.__TAURI_INTERNALS__.invoke) {{
-                            window.__TAURI_INTERNALS__.invoke("bind_captured_token", {{ id: accountId, token: tokenVal }})
+                        if (window.__TAURI__ && window.__TAURI__.core.invoke) {{
+                            window.__TAURI__.core.invoke("bind_captured_token", {{ id: accountId, token: tokenVal }})
                                 .catch(err => console.error(err));
                         }}
                     }}
@@ -621,8 +654,8 @@ pub fn start_silent_login(app: tauri::AppHandle, id: String, name: String) -> Re
                         
                         search(data);
                         if (foundToken) {{
-                            if (window.__TAURI_INTERNALS__ && window.__TAURI_INTERNALS__.invoke) {{
-                                window.__TAURI_INTERNALS__.invoke("bind_captured_token", {{ id: accountId, token: foundToken }})
+                            if (window.__TAURI__ && window.__TAURI__.core.invoke) {{
+                                window.__TAURI__.core.invoke("bind_captured_token", {{ id: accountId, token: foundToken }})
                                     .catch(err => console.error(err));
                             }}
                         }}
@@ -700,8 +733,8 @@ pub fn start_silent_login(app: tauri::AppHandle, id: String, name: String) -> Re
                         
                         if (plan) {{
                             const upperPlan = plan.toUpperCase();
-                            if (window.__TAURI_INTERNALS__ && window.__TAURI_INTERNALS__.invoke) {{
-                                await window.__TAURI_INTERNALS__.invoke("update_account_plan", {{ id: accountId, plan: upperPlan }});
+                            if (window.__TAURI__ && window.__TAURI__.core.invoke) {{
+                                await window.__TAURI__.core.invoke("update_account_plan", {{ id: accountId, plan: upperPlan }});
                                 return true;
                             }}
                         }}
@@ -748,8 +781,8 @@ fn copy_dir_all(src: impl AsRef<std::path::Path>, dst: impl AsRef<std::path::Pat
 }
 
 #[tauri::command]
-pub fn apply_account_to_default_ide(app: tauri::AppHandle, id: String) -> Result<(), String> {
-    let mut config = load_config(&app)?;
+pub fn apply_account_to_default_ide(app: tauri::AppHandle, state: tauri::State<'_, AppState>, id: String) -> Result<(), String> {
+    let mut config = state.0.lock().map_err(|e| format!("[CRITICAL] Mutex lock failed: {}", e))?;
     let mut target_account = None;
     for acc in &config.accounts {
         if acc.id == id {
@@ -794,7 +827,7 @@ pub fn apply_account_to_default_ide(app: tauri::AppHandle, id: String) -> Result
     if creds_path.exists() {
         if let Ok(content) = fs::read_to_string(&creds_path) {
             for line in content.lines() {
-                let clean = line.trim();
+                let clean = line.split('#').next().unwrap_or("").trim();
                 if clean.starts_with("windsurf_api_key") {
                     if let Some(eq_idx) = clean.find('=') {
                         let val = clean[eq_idx + 1..].trim().trim_matches('"').trim_matches('\'').trim().to_string();
@@ -825,7 +858,7 @@ pub fn apply_account_to_default_ide(app: tauri::AppHandle, id: String) -> Result
     }
 
     if config_modified {
-        save_config(&app, &config)?;
+        save_config(&app, &*config)?;
         let _ = app.emit("account-plan-updated", ());
     }
 
@@ -859,8 +892,8 @@ pub fn apply_account_to_default_ide(app: tauri::AppHandle, id: String) -> Result
 }
 
 #[tauri::command]
-pub fn capture_credentials(app: tauri::AppHandle, id: String, email: Option<String>, password: Option<String>) -> Result<(), String> {
-    let mut config = load_config(&app)?;
+pub fn capture_credentials(app: tauri::AppHandle, state: tauri::State<'_, AppState>, id: String, email: Option<String>, password: Option<String>) -> Result<(), String> {
+    let mut config = state.0.lock().map_err(|e| format!("[CRITICAL] Mutex lock failed: {}", e))?;
     let mut found = false;
 
     let clean_email = email.filter(|e| !e.trim().is_empty()).map(|e| e.trim().to_string());
@@ -881,7 +914,7 @@ pub fn capture_credentials(app: tauri::AppHandle, id: String, email: Option<Stri
     }
 
     if found {
-        save_config(&app, &config)?;
+        save_config(&app, &*config)?;
         let _ = app.emit("account-plan-updated", ());
     }
 

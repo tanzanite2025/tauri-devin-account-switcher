@@ -4,6 +4,12 @@ mod state;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .setup(|app| {
+            let config = state::load_config(app.handle()).unwrap_or_default();
+            use tauri::Manager;
+            app.manage(state::AppState(std::sync::Mutex::new(config)));
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             state::get_accounts,
             state::add_account,
