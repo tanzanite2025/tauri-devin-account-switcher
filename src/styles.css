@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  --color-primary: var(--color-emerald-500);
+  --color-bg-dark: #09090b;
+  --color-border-industrial: rgba(255, 255, 255, 0.08);
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: #09090b;
+    color: #f4f4f5;
+    font-family: var(--font-sans);
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    user-select: none;
+  }
+}
+
+/* ERP UDS 核心排版类 */
+.uds-h1 {
+  @apply text-lg font-black tracking-tighter italic uppercase;
+}
+
+.uds-h2 {
+  @apply text-sm font-black tracking-tighter italic;
+}
+
+.uds-label {
+  @apply text-[11px] font-black uppercase tracking-widest text-zinc-500;
+}
+
+.uds-desc {
+  @apply text-[9px] font-black uppercase tracking-widest opacity-60 text-zinc-400;
+}
+
+.uds-mono {
+  @apply text-[8px] font-mono;
+}
+
+/* 几何形状 */
+.uds-header {
+  @apply rounded-[32px] border border-dashed border-zinc-800 bg-zinc-900/10 p-6;
+}
+
+.uds-card {
+  @apply rounded-[24px] border border-dashed border-zinc-800 bg-zinc-900/20 p-5 transition-all duration-300 hover:border-zinc-700 hover:bg-zinc-900/40;
+}
+
+.uds-dialog {
+  @apply rounded-[32px] border-none shadow-2xl bg-zinc-900/95 backdrop-blur-md p-8;
+}
+
+.uds-input {
+  @apply h-12 rounded-2xl border-none bg-zinc-900/60 px-4 text-zinc-100 text-[10px] font-medium placeholder:text-[9px] placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all;
+}
+
+/* 状态语义 */
+.uds-status-healthy {
+  @apply bg-emerald-500/10 text-emerald-400 border border-emerald-500/20;
+}
+
+.uds-status-alert {
+  @apply bg-amber-500/10 text-amber-400 border border-amber-500/20;
+}
+
+.uds-status-critical {
+  @apply bg-rose-500/10 text-rose-400 border border-rose-500/20 animate-pulse;
+}
+
+/* 细节点缀 */
+.uds-depth-gradient {
+  @apply absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent pointer-events-none rounded-[inherit];
+}
+
+/* 按钮规范 */
+.uds-btn-primary {
+  @apply rounded-full h-11 px-6 font-black text-[10px] uppercase tracking-widest bg-emerald-500 text-zinc-950 hover:bg-emerald-400 active:scale-95 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer;
+}
+
+.uds-btn-ghost {
+  @apply text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 px-4 py-2 rounded-full transition-all duration-200 flex items-center justify-center gap-1 cursor-pointer;
+}
+
+.uds-btn-danger {
+  @apply text-[10px] font-black uppercase tracking-widest text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 px-4 py-2 rounded-full transition-all duration-200 flex items-center justify-center gap-1 cursor-pointer;
+}
+
+/* Badge */
+.uds-badge {
+  @apply inline-flex items-center justify-center rounded-full h-5 px-2.5 text-[8px] font-mono uppercase tracking-wider;
+}
+
+/* 极细进度条 */
+.uds-progress-bg {
+  @apply h-1 w-full bg-zinc-800 rounded-full overflow-hidden;
+}
+.uds-progress-bar {
+  @apply h-full bg-emerald-500 rounded-full transition-all duration-500;
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-zinc-800 rounded-full hover:bg-zinc-700;
+}
