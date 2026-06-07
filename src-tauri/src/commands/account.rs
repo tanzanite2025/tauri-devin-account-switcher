@@ -138,3 +138,27 @@ pub fn update_account_plan(app: tauri::AppHandle, state: tauri::State<'_, AppSta
 
     Ok(())
 }
+
+#[tauri::command]
+pub fn update_account_quota(app: tauri::AppHandle, state: tauri::State<'_, AppState>, id: String, billing_error: Option<String>, available_credits: Option<f64>) -> Result<(), String> {
+    let mut config = state.0.lock().map_err(|e| format!("[CRITICAL] Mutex lock failed: {}", e))?;
+    let mut found = false;
+
+    for acc in &mut config.accounts {
+        if acc.id == id {
+            if acc.billing_error != billing_error || acc.available_credits != available_credits {
+                acc.billing_error = billing_error.clone();
+                acc.available_credits = available_credits;
+                found = true;
+            }
+            break;
+        }
+    }
+
+    if found {
+        save_config(&app, &*config)?;
+        let _ = app.emit("account-quota-updated", ());
+    }
+
+    Ok(())
+}

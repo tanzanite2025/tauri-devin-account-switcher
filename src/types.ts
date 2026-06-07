@@ -7,4 +7,6 @@ export interface Account {
   org_id?: string;
   plan_tier: string;
   created_at: number;
+  available_credits?: number;
+  billing_error?: string;
 }

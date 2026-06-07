@@ -18,6 +18,7 @@ pub fn run() {
             commands::account::delete_account,
             commands::account::rename_account,
             commands::account::update_account_plan,
+            commands::account::update_account_quota,
             commands::sandbox::import_current_credentials,
             commands::sandbox::apply_account_to_default_ide,
             commands::webview::open_account_window,

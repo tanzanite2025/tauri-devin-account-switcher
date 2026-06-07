@@ -84,9 +84,16 @@ window.addEventListener("DOMContentLoaded", () => {
     criticalAlertBar.classList.add("hidden");
   });
 
-  listen("account-plan-updated", () => {
-    fetchAccountsApi();
-  });
+  let fetchTimer: any = null;
+  const debouncedFetch = () => {
+    if (fetchTimer) clearTimeout(fetchTimer);
+    fetchTimer = setTimeout(() => {
+      fetchAccountsApi();
+    }, 200);
+  };
+
+  listen("account-plan-updated", debouncedFetch);
+  listen("account-quota-updated", debouncedFetch);
 
   fetchAccountsApi();
 });

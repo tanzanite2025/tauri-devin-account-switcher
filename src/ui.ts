@@ -222,8 +222,59 @@ export function renderAccounts() {
       cardContent.appendChild(copyRow);
     }
 
+    if (acc.available_credits != null || acc.billing_error) {
+      const quotaContainer = document.createElement("div");
+      quotaContainer.className = "flex flex-col gap-1 mt-2";
+      
+      const quotaHeader = document.createElement("div");
+      quotaHeader.className = "flex justify-between items-center";
+      
+      const quotaLabel = document.createElement("span");
+      quotaLabel.className = "text-[10px] font-black uppercase tracking-widest text-zinc-500/50";
+      quotaLabel.textContent = "QUOTA";
+      
+      const quotaValue = document.createElement("span");
+      quotaValue.className = "uds-mono text-[9px] font-bold px-2 py-0.5 rounded-full";
+      
+      const progressBarBg = document.createElement("div");
+      progressBarBg.className = "w-full h-1 rounded-full bg-zinc-800/30 overflow-hidden mt-1";
+      
+      const progressBar = document.createElement("div");
+      progressBar.className = "h-full rounded-full transition-all duration-500";
+      
+      const isOutOfQuota = acc.billing_error === "out_of_quota";
+      
+      if (isOutOfQuota || acc.available_credits === 0) {
+        quotaValue.textContent = "0 (DEPLETED)";
+        quotaValue.className += " bg-rose-500/10 text-rose-600 animate-pulse";
+        progressBar.className += " bg-rose-500/80";
+        progressBar.style.width = "5%";
+      } else {
+        const credits = acc.available_credits != null ? acc.available_credits : "∞";
+        quotaValue.textContent = `${credits} CREDITS`;
+        if (typeof credits === 'number' && credits < 50) {
+          quotaValue.className += " bg-amber-500/10 text-amber-600";
+          progressBar.className += " bg-amber-500/80";
+          progressBar.style.width = `${Math.max(10, Math.min(100, credits))}%`;
+        } else {
+          quotaValue.className += " bg-emerald-500/10 text-emerald-600";
+          progressBar.className += " bg-emerald-500/80";
+          progressBar.style.width = typeof credits === 'number' ? `${Math.min(100, credits / 5)}%` : "100%";
+        }
+      }
+      
+      quotaHeader.appendChild(quotaLabel);
+      quotaHeader.appendChild(quotaValue);
+      progressBarBg.appendChild(progressBar);
+      
+      quotaContainer.appendChild(quotaHeader);
+      quotaContainer.appendChild(progressBarBg);
+      
+      cardContent.appendChild(quotaContainer);
+    }
+
     const idMeta = document.createElement("div");
-    idMeta.className = "uds-mono text-zinc-500 mt-1 select-all";
+    idMeta.className = "uds-mono text-zinc-500 mt-2 select-all";
     idMeta.textContent = `ID: ${acc.id.substring(0, 8)}...`;
     cardContent.appendChild(idMeta);
 

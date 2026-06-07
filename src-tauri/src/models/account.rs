@@ -17,6 +17,10 @@ pub struct Account {
     pub org_id: Option<String>,
     #[serde(default = "default_plan_tier")]
     pub plan_tier: String,
+    #[serde(default)]
+    pub billing_error: Option<String>,
+    #[serde(default)]
+    pub available_credits: Option<f64>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
