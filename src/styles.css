@@ -84,7 +84,7 @@
 
 /* 按钮规范 */
 .uds-btn-primary {
-  @apply rounded-full h-11 px-6 font-black text-[10px] uppercase tracking-widest bg-emerald-500 text-zinc-950 hover:bg-emerald-400 active:scale-95 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer;
+  @apply rounded-full h-9 px-6 font-black text-[10px] uppercase tracking-widest bg-emerald-500 text-zinc-950 hover:bg-emerald-400 active:scale-95 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer;
 }
 
 .uds-btn-ghost {

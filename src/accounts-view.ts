@@ -27,14 +27,14 @@ export function renderAccounts() {
 
   state.accounts.forEach((acc) => {
     const card = document.createElement("div");
-    card.className = "uds-card relative overflow-hidden flex flex-col justify-between gap-5 w-[85%] mx-auto";
+    card.className = "uds-card relative overflow-hidden flex flex-col justify-between gap-5";
     
     const depth = document.createElement("div");
     depth.className = "uds-depth-gradient";
     card.appendChild(depth);
 
     const cardContent = document.createElement("div");
-    cardContent.className = "grid grid-cols-[1.7fr_1.3fr] gap-3 z-10 items-start";
+    cardContent.className = "grid grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)] gap-4 z-10 items-start";
 
     const headerRow = document.createElement("div");
     headerRow.className = "flex justify-between items-start gap-3 col-span-2";
@@ -74,7 +74,7 @@ export function renderAccounts() {
     leftCol.className = "flex flex-col gap-2";
 
     const rightCol = document.createElement("div");
-    rightCol.className = "flex flex-col gap-2 items-end";
+    rightCol.className = "flex flex-col gap-2 items-end pr-3";
 
     if (acc.email) {
       const emailMeta = document.createElement("div");
@@ -85,7 +85,7 @@ export function renderAccounts() {
 
     if (acc.email || acc.password) {
       const copyRow = document.createElement("div");
-      copyRow.className = "flex items-center gap-2 mt-1";
+      copyRow.className = "flex flex-wrap justify-end gap-2 mt-1 max-w-full";
       
       if (acc.email) {
         const btnCopyEmail = document.createElement("button");
@@ -181,7 +181,7 @@ export function renderAccounts() {
     actionsRow.className = "flex justify-between items-center gap-2 z-10 mt-2";
 
     const btnLaunch = document.createElement("button");
-    btnLaunch.className = "uds-btn-primary flex-1 py-1 h-9 gap-1 text-[9px]";
+    btnLaunch.className = "uds-btn-primary flex-1 gap-1 text-[9px]";
     btnLaunch.innerHTML = `
       <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
       ${t("launch")}
@@ -190,7 +190,7 @@ export function renderAccounts() {
     actionsRow.appendChild(btnLaunch);
 
     const btnLaunchIde = document.createElement("button");
-    btnLaunchIde.className = "uds-btn-primary flex-1 py-1 h-9 gap-1 text-[9px] bg-zinc-800 hover:bg-zinc-700 text-zinc-100";
+    btnLaunchIde.className = "uds-btn-primary flex-1 gap-1 text-[9px] bg-zinc-800 hover:bg-zinc-700 text-zinc-100";
     btnLaunchIde.innerHTML = `
       <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
       ${t("ide")}
@@ -199,7 +199,7 @@ export function renderAccounts() {
     actionsRow.appendChild(btnLaunchIde);
 
     const btnRename = document.createElement("button");
-    btnRename.className = "uds-btn-ghost p-1 text-[9px]";
+    btnRename.className = "uds-btn-ghost h-9 px-3 text-[9px]";
     btnRename.textContent = t("rename");
     btnRename.addEventListener("click", () => {
       // 这里仅负责调用弹窗打开逻辑，具体实现保留在 ui.ts 中
@@ -219,7 +219,7 @@ export function renderAccounts() {
     actionsRow.appendChild(btnRename);
 
     const btnDelete = document.createElement("button");
-    btnDelete.className = "uds-btn-danger p-1 text-[9px]";
+    btnDelete.className = "uds-btn-danger h-9 px-3 text-[9px]";
     btnDelete.textContent = t("delete");
     btnDelete.addEventListener("click", () => {
       if (confirm(t("deleteConfirm"))) {
