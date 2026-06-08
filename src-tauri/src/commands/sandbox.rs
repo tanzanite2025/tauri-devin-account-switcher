@@ -1,8 +1,8 @@
 use std::fs;
 use serde::{Deserialize, Serialize};
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
-use crate::models::account::AppState;
+use crate::models::account::{AppState, AppConfig};
 use crate::models::storage::save_config;
 
 fn parse_default_credentials() -> Result<(Option<String>, Option<String>), String> {
@@ -44,6 +44,33 @@ fn parse_default_credentials() -> Result<(Option<String>, Option<String>), Strin
     }
 
     Ok((token, org_id))
+}
+
+fn resolve_devin_ide_path(config: &mut AppConfig) -> Result<std::path::PathBuf, String> {
+    if let Some(ref stored) = config.devin_ide_path {
+        let path = std::path::PathBuf::from(stored);
+        if path.exists() {
+            return Ok(path);
+        }
+    }
+
+    if let Ok(env_path) = std::env::var("DEVIN_IDE_PATH") {
+        let path = std::path::PathBuf::from(&env_path);
+        if path.exists() {
+            config.devin_ide_path = Some(env_path);
+            return Ok(path);
+        }
+    }
+
+    let default_path = std::path::PathBuf::from(r"E:\devin\Devin\Devin.exe");
+    if default_path.exists() {
+        if config.devin_ide_path.is_none() {
+            config.devin_ide_path = Some(default_path.to_string_lossy().to_string());
+        }
+        return Ok(default_path);
+    }
+
+    Err("[CRITICAL] 找不到本地 Devin 客户端。请在配置文件中配置 devin_ide_path 字段，或通过 DEVIN_IDE_PATH 环境变量指定 Devin.exe 的完整路径。".to_string())
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -169,19 +196,20 @@ pub fn apply_account_to_default_ide(app: tauri::AppHandle, state: tauri::State<'
         }
     }
 
-    let ide_path = std::path::PathBuf::from(r"E:\devin\Devin\Devin.exe");
-    if !ide_path.exists() {
-        return Err("[CRITICAL] 找不到本地 Devin 客户端 (E:\\devin\\Devin\\Devin.exe)。请确保该软件已正确安装。".to_string());
-    }
+    // 3. 解析 Devin IDE 可执行文件路径，支持配置文件或环境变量
+    let ide_path = resolve_devin_ide_path(&mut config)?;
 
     // 目录隔离拉起，并强制配置密码保存在隔离沙箱中，防止读写系统全局凭证管理器
     // 同时，修改 APPDATA 环境变量，使 Devin 插件的凭证文件 credentials.toml 被隔离存储在 profile_dir 下
-    std::process::Command::new(ide_path)
+    std::process::Command::new(&ide_path)
         .env("APPDATA", &profile_dir)
         .arg(format!("--user-data-dir={}", profile_dir.to_string_lossy()))
         .arg("--password-store=basic")
         .spawn()
         .map_err(|e| format!("[CRITICAL] 启动 Devin.exe 客户端失败: {}", e))?;
+
+    // 持久化可能更新的 devin_ide_path
+    save_config(&app, &*config)?;
 
     Ok(())
 }

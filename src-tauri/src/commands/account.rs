@@ -1,6 +1,6 @@
 use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use uuid::Uuid;
 
 use crate::models::account::{Account, AppState};
@@ -14,9 +14,6 @@ pub fn get_accounts(state: tauri::State<'_, AppState>) -> Result<Vec<Account>, S
 
 #[tauri::command]
 pub fn add_account(app: tauri::AppHandle, state: tauri::State<'_, AppState>, name: String, email: Option<String>, password: Option<String>, token: Option<String>, org_id: Option<String>, plan_tier: String) -> Result<Account, String> {
-    if name.trim().is_empty() {
-        return Err("[CRITICAL] 账号名称不能为空".to_string());
-    }
     let mut config = state.0.lock().map_err(|e| format!("[CRITICAL] Mutex lock failed: {}", e))?;
     
     let id = Uuid::new_v4().to_string();
@@ -40,6 +37,8 @@ pub fn add_account(app: tauri::AppHandle, state: tauri::State<'_, AppState>, nam
         org_id: clean_org,
         plan_tier: upper_plan,
         created_at,
+        billing_error: None,
+        available_credits: None,
     };
     
     config.accounts.push(new_account.clone());
@@ -82,9 +81,6 @@ pub fn delete_account(app: tauri::AppHandle, state: tauri::State<'_, AppState>, 
 
 #[tauri::command]
 pub fn rename_account(app: tauri::AppHandle, state: tauri::State<'_, AppState>, id: String, new_name: String, email: Option<String>, password: Option<String>, token: Option<String>, org_id: Option<String>, plan_tier: String) -> Result<(), String> {
-    if new_name.trim().is_empty() {
-        return Err("[CRITICAL] 账号名称不能为空".to_string());
-    }
     let mut config = state.0.lock().map_err(|e| format!("[CRITICAL] Mutex lock failed: {}", e))?;
     
     let mut found = false;

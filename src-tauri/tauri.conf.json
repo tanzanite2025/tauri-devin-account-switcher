@@ -14,8 +14,8 @@
     "windows": [
       {
         "title": "Devin Account Switcher",
-        "width": 860,
-        "height": 640
+        "width": 960,
+        "height": 720
       }
     ],
     "security": {

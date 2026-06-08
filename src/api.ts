@@ -1,7 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { failLoudly } from "./dom";
 import type { Account } from "./types";
-import { showLoading, hideLoading, renderAccounts } from "./ui";
+import { showLoading, hideLoading } from "./ui";
+import { renderAccounts } from "./accounts-view";
 import { state } from "./state";
 
 export async function fetchAccountsApi() {
@@ -79,9 +80,9 @@ export async function saveProfileApi(
   showLoading();
   try {
     if (mode === "create") {
-      await invoke("add_account", { name, email, password, token, orgId, planTier: plan });
+      await invoke("add_account", { name, email, password, token, org_id: orgId, plan_tier: plan });
     } else if (mode === "rename" && id) {
-      await invoke("rename_account", { id, newName: name, email, password, token, orgId, planTier: plan });
+      await invoke("rename_account", { id, new_name: name, email, password, token, org_id: orgId, plan_tier: plan });
     }
     await fetchAccountsApi();
   } catch (err) {

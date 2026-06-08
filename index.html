@@ -71,19 +71,21 @@
     <!-- 弹窗遮罩层 -->
     <div id="dialog-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-40 hidden">
       <!-- 新增/编辑弹窗 -->
-      <div id="account-dialog" class="uds-dialog max-w-md w-full relative flex flex-col gap-6 scale-95 opacity-0 transition-all duration-300">
+      <div id="account-dialog" class="uds-dialog w-[85%] max-w-4xl relative flex flex-col gap-6 scale-95 opacity-0 transition-all duration-300">
         <div class="uds-depth-gradient"></div>
         <div class="flex flex-col gap-1">
           <h2 id="dialog-title" class="uds-h2 text-emerald-400" data-i18n="createProfile">Create Profile</h2>
           <div class="uds-desc" id="dialog-desc" data-i18n="configSandbox">Configure sandbox identifier and local data directory</div>
         </div>
 
-        <div class="flex flex-col gap-4">
-          <div class="flex flex-col gap-2">
+        <div class="grid grid-cols-2 gap-4">
+          <!-- 账号备注名：整行 -->
+          <div class="flex flex-col gap-2 col-span-2">
             <label for="input-account-name" class="uds-label" data-i18n="profileName">Profile Name / Memo</label>
             <input type="text" id="input-account-name" class="uds-input w-full" placeholder="e.g. Work, Personal, Client A..." autocomplete="off">
           </div>
           
+          <!-- 左：登录邮箱；右：登录密码 -->
           <div class="flex flex-col gap-2">
             <label for="input-account-email" class="uds-label" data-i18n="profileEmail">Email Address (Optional)</label>
             <input type="email" id="input-account-email" class="uds-input w-full" placeholder="e.g. devin@company.com..." autocomplete="off">
@@ -100,6 +102,7 @@
             </div>
           </div>
 
+          <!-- 左：Token；右：Org ID -->
           <div class="flex flex-col gap-2">
             <div class="flex justify-between items-center">
               <label for="input-account-token" class="uds-label" data-i18n="profileToken">Windsurf Token (Optional)</label>
@@ -113,7 +116,8 @@
             <input type="text" id="input-account-org" class="uds-input w-full" placeholder="e.g. org_..." autocomplete="off">
           </div>
 
-          <div class="flex flex-col gap-2">
+          <!-- 订阅套餐：整行 -->
+          <div class="flex flex-col gap-2 col-span-2">
             <label for="select-account-plan" class="uds-label" data-i18n="profilePlan">Subscription Plan</label>
             <select id="select-account-plan" class="uds-input w-full bg-zinc-900/60 text-zinc-100 cursor-pointer">
               <option value="AUTO" data-i18n="planAuto">AUTO (Auto Detect)</option>

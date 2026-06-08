@@ -1,5 +1,5 @@
 use std::fs;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 use crate::models::account::AppState;
 use crate::models::storage::save_config;
@@ -77,6 +77,7 @@ pub fn bind_captured_token(app: tauri::AppHandle, state: tauri::State<'_, AppSta
     if found {
         save_config(&app, &*config)?;
         let _ = app.emit("account-plan-updated", ());
+        let _ = app.emit("silent-login-success", id.clone());
     }
 
     // 尝试关闭后台静默登录的隐藏窗口

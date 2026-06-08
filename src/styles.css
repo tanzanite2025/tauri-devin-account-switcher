@@ -56,6 +56,8 @@
 
 .uds-dialog {
   @apply rounded-[32px] border-none shadow-2xl bg-zinc-900/95 backdrop-blur-md p-8;
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
 }
 
 .uds-input {

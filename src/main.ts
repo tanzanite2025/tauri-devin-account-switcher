@@ -1,5 +1,5 @@
 import { listen } from "@tauri-apps/api/event";
-import { initLanguage, toggleLanguage, t } from "./i18n";
+import { initLanguage, toggleLanguage, t, applyLanguage } from "./i18n";
 import { getEl } from "./dom";
 import { state } from "./state";
 import { fetchAccountsApi, saveProfileApi, importCurrentCredentialsApi, triggerQuotaRefreshApi } from "./api";
@@ -7,6 +7,7 @@ import { openDialog, closeDialog, togglePasswordVisibility } from "./ui";
 
 window.addEventListener("DOMContentLoaded", () => {
   initLanguage();
+  applyLanguage();
 
   const btnLangToggle = getEl<HTMLButtonElement>("#btn-lang-toggle");
   const btnAddAccount = getEl<HTMLButtonElement>("#btn-add-account");
@@ -39,12 +40,6 @@ window.addEventListener("DOMContentLoaded", () => {
     const token = inputAccountToken.value.trim() || null;
     const orgId = inputAccountOrg.value.trim() || null;
     const plan = selectAccountPlan.value;
-    
-    if (!name) {
-      alert(t("nameEmptyAlert"));
-      return;
-    }
-
     await saveProfileApi(state.dialogMode, state.activeAccountId, name, email, password, token, orgId, plan);
     closeDialog();
   };

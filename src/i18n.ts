@@ -1,5 +1,5 @@
 import { getEl } from "./dom";
-import { renderAccounts } from "./ui";
+import { renderAccounts } from "./accounts-view";
 import { state } from "./state";
 
 export const i18nDict: Record<"zh" | "en", Record<string, any>> = {
@@ -15,7 +15,7 @@ export const i18nDict: Record<"zh" | "en", Record<string, any>> = {
     createProfile: "创建账号卡片",
     renameProfile: "重命名账号卡片",
     configSandbox: "只需输入备注名，网页端与客户端登录后，邮箱、密码和凭证将全自动捕获！",
-    profileName: "账号备注名 (必填)",
+    profileName: "账号备注名",
     profileEmail: "登录邮箱 (网页登录后自动捕获)",
     profilePassword: "登录密码 (网页登录后自动捕获)",
     profileToken: "Windsurf Token (客户端启动时自动捕获)",
@@ -68,7 +68,7 @@ export const i18nDict: Record<"zh" | "en", Record<string, any>> = {
     createProfile: "Create Profile",
     renameProfile: "Rename Profile",
     configSandbox: "Enter name only. Email, password, and tokens will be auto-captured upon login!",
-    profileName: "Profile Name / Memo (Required)",
+    profileName: "Profile Name / Memo",
     profileEmail: "Email Address (Auto-captured in Web)",
     profilePassword: "Login Password (Auto-captured in Web)",
     profileToken: "Windsurf Token (Auto-captured on IDE launch)",

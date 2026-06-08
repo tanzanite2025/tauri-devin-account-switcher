@@ -26,6 +26,8 @@ pub struct Account {
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub struct AppConfig {
     pub accounts: Vec<Account>,
+    #[serde(default)]
+    pub devin_ide_path: Option<String>,
 }
 
 pub struct AppState(pub std::sync::Mutex<AppConfig>);
