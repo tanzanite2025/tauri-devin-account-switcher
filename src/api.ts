@@ -80,9 +80,29 @@ export async function saveProfileApi(
   showLoading();
   try {
     if (mode === "create") {
-      await invoke("add_account", { name, email, password, token, org_id: orgId, plan_tier: plan });
+      await invoke("add_account", {
+        name,
+        email,
+        password,
+        token,
+        // Rust: org_id -> JS: orgId (camelCase)
+        orgId: orgId,
+        // Rust: plan_tier -> JS: planTier (camelCase)
+        planTier: plan,
+      });
     } else if (mode === "rename" && id) {
-      await invoke("rename_account", { id, new_name: name, email, password, token, org_id: orgId, plan_tier: plan });
+      await invoke("rename_account", {
+        id,
+        // Rust: new_name -> JS: newName (camelCase)
+        newName: name,
+        email,
+        password,
+        token,
+        // Rust: org_id -> JS: orgId (camelCase)
+        orgId: orgId,
+        // Rust: plan_tier -> JS: planTier (camelCase)
+        planTier: plan,
+      });
     }
     await fetchAccountsApi();
   } catch (err) {

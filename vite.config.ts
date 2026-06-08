@@ -16,7 +16,8 @@ export default defineConfig(async () => ({
   server: {
     port: 1420,
     strictPort: true,
-    host: host || false,
+    // 绑定到 IPv4 以避免 localhost 在某些环境下解析为 ::1 导致 Tauri 连不上
+    host: host || "127.0.0.1",
     hmr: host
       ? {
           protocol: "ws",
