@@ -145,7 +145,7 @@ export function applyLanguage() {
   inputAccountOrg.placeholder = t("placeholderOrgId") || "";
 
   const langBtnText = getEl<HTMLElement>("#lang-btn-text");
-  langBtnText.textContent = state.currentLang === "zh" ? "EN" : "中文";
+  langBtnText.textContent = state.currentLang === "zh" ? "中文" : "EN";
 
   const dialogTitle = getEl<HTMLElement>("#dialog-title");
   const dialogDesc = getEl<HTMLElement>("#dialog-desc");
